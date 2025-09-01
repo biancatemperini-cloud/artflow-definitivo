@@ -1,5 +1,8 @@
+/*
+  Nombre de archivo: /api/gemini-proxy.js
+  Esta es una función serverless que actúa como un proxy seguro a la API de Gemini.
+*/
 
-// Usamos el fetch nativo de Node.js (disponible en v18+ y en la mayoría de las plataformas serverless)
 export default async function handler(req, res) {
     // 1. Solo aceptar solicitudes POST
     if (req.method !== 'POST') {
@@ -35,7 +38,6 @@ export default async function handler(req, res) {
 
         const data = await geminiResponse.json();
 
-        // Si Gemini devuelve un error, lo pasamos al cliente.
         if (!geminiResponse.ok) {
             console.error("Error desde la API de Gemini:", data);
             return res.status(geminiResponse.status).json({ error: data.error?.message || 'Error en la API de Gemini' });
