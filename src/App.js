@@ -388,8 +388,8 @@ const CreativeAdvisor = ({ projects, tasks }) => {
         const activeProjects = projects.map(p => p.name);
         const prompt = `Eres 'ArtFlow AI Coach', un consejero de productividad para artistas. Tu tono es inspirador, comprensivo y práctico. Entiendes que los artistas no tienen horarios fijos de 9 a 5. Aquí tienes información sobre el usuario: - Proyectos activos: ${activeProjects.join(', ') || 'Ninguno'} - Tareas completadas recientemente: ${recentTasks.join(', ') || 'Ninguna'}. Usa UNA de las siguientes técnicas de productividad de personas exitosas, pero adáptala específicamente para el contexto de un artista. NO menciones el nombre de la técnica (ej. 'Ivy Lee'), solo explica el concepto adaptado. TÉCNICAS: 1. Eat the Frog (Hacer lo más difícil primero): Abordar la tarea más intimidante o compleja al inicio del día para liberar energía creativa. 2. The Ivy Lee Method (Planificar la noche anterior): Al final del día, anotar las 3-4 cosas más importantes para el día siguiente para empezar con un plan claro. 3. Time Blocking (Bloques de tiempo): Asignar una ventana de tiempo específica (ej. 90 min) a una única tarea, tratándola como una cita inamovible para proteger el tiempo creativo. 4. The Two-Minute Rule (Regla de los dos minutos): Si una tarea administrativa o de preparación se puede hacer en menos de dos minutos, hacerla inmediatamente para despejar la mente. 5. Deep Work (Trabajo profundo): Crear un ritual para sumergirse en el trabajo sin distracciones (teléfono lejos, sin notificaciones) durante un período extendido. TAREA: Basado en todo esto, genera UNA unica sugerencia corta (2-3 frases) que sea relevante para los proyectos o tareas del usuario. Conecta la técnica con su trabajo actual. La sugerencia debe ser motivadora y fácil de aplicar hoy. Responde solo con el texto de la sugerencia.`;
         try {
-            const apiUrl = '/api/gemini-proxy'; // o la URL completa de tu función serverless
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
+            const apiUrl = '/api/gemini-proxy';
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt }) });
             if (!response.ok) throw new Error(`Error del proxy: ${response.statusText}`);
             const result = await response.json();
             const text = result.candidates[0].content.parts[0].text;
@@ -457,8 +457,8 @@ const DailyMissions = ({ userId, showReward }) => {
         setMissions(missions.map(m => m.id === missionId ? { ...m, completed: true } : m));
         const prompt = `Eres ArtFlow AI, un coach creativo con mucho humor. Un artista acaba de completar una tarea del hogar. Genera un mensaje de recompensa corto (1-2 frases), divertido y exageradamente épico. La tarea es: "${missionName}". Responde solo con el texto de la respuesta.`;
         try {
-            const apiUrl = '/api/gemini-proxy'; // o la URL completa de tu función serverless
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
+            const apiUrl = '/api/gemini-proxy';
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt }) });
             if (!response.ok) throw new Error('Failed to get reward');
             const result = await response.json();
             showReward(result.candidates[0].content.parts[0].text.trim());
@@ -494,8 +494,8 @@ const WeeklyMissions = ({ userId, showReward }) => {
         setWeeklyStatus(prev => ({ ...prev, [missionId]: true }));
         const prompt = `Eres ArtFlow AI, un coach creativo con mucho humor. Un artista acaba de completar una tarea semanal del hogar. Genera un mensaje de recompensa corto (1-2 frases), divertido y exageradamente épico. La tarea es: "${missionName}". Responde solo con el texto de la recompensa.`;
         try {
-            const apiUrl = '/api/gemini-proxy'; // o la URL completa de tu función serverless
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+            const apiUrl = '/api/gemini-proxy';
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt }) });
             if (!response.ok) throw new Error('Failed to get reward');
             const result = await response.json();
             showReward(result.candidates[0].content.parts[0].text.trim());
@@ -919,8 +919,8 @@ const ProjectForm = ({ onSubmit, project }) => {
         setError(''); setIsGenerating(true); setGeneratedTasks([]);
         const prompt = `Eres un asistente experto en gestión de proyectos para artistas. Un usuario está creando un proyecto. Basado en el título y la descripción, desglósalo en una lista de 5 a 10 tareas procesables para un flujo de trabajo creativo. Devuelve un array JSON de strings. Título: "${name}", Descripción: "${description}". Responde únicamente con el array JSON.`;
         try {
-            const apiUrl = '/api/gemini-proxy'; // o la URL completa de tu función serverless
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
+            const apiUrl = '/api/gemini-proxy';
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt }) });
             if (!response.ok) throw new Error(`Error del proxy: ${response.statusText}`);
             const result = await response.json();
             const text = result.candidates[0].content.parts[0].text;
