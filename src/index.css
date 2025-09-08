@@ -16,7 +16,47 @@ body {
 .dark body {
   color: #e5e7eb;
 }
-/* 3. TUS ESTILOS PERSONALIZADOS: ¡Aquí está toda tu magia! */
+
+/* 4. TUS ESTILOS PERSONALIZADOS */
+
+@layer components {
+  /* Clase para adaptar el texto de las tarjetas */
+  .card-text-wrap {
+    word-break: break-word;
+  }
+
+  /* ESTILOS PARA LA SECCIÓN CEREBRO (POST-ITS) - SIMPLIFICADO SIN OREJAS */
+  /* El wrapper solo se encarga de la rotación y el hover */
+  .post-it-wrapper {
+    @apply transition-transform duration-200;
+  }
+  .post-it-wrapper:hover {
+    @apply shadow-2xl scale-105 z-10;
+    transform: rotate(0deg) !important;
+  }
+
+  /* La nota en sí */
+  .post-it {
+    @apply w-full h-full p-4 shadow-lg flex flex-col; /* Usamos flex para que el contenido se estire */
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  /* Variantes de color. Ahora se aplican directamente al post-it */
+  .post-it-pink {
+    @apply bg-pink-100 text-pink-900;
+  }
+  .post-it-blue {
+    @apply bg-blue-100 text-blue-900;
+  }
+  .post-it-violet {
+    @apply bg-violet-100 text-violet-800;
+  }
+  
+  /* Estilos para las etiquetas de categoría de proyecto */
+  .category-badge {
+    @apply text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full;
+  }
+}
 
 /* Animaciones personalizadas */
 @keyframes blob {
@@ -50,6 +90,29 @@ body {
 @keyframes fadeInUp {
   0% { transform: translateY(30px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
+}
+
+/* --- ANIMACIÓN DE CONFETI --- */
+@keyframes confetti-explode {
+  0% {
+    transform: translateY(0) rotate(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--x-end), var(--y-end)) rotate(720deg) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes zoom-in-fade {
+  0% { 
+    transform: translate(-50%, -50%) scale(0.5); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: translate(-50%, -50%) scale(1); 
+    opacity: 1; 
+  }
 }
 
 .animate-blob { animation: blob 7s infinite; }
@@ -100,8 +163,17 @@ body {
   background-size: 20px 20px;
 }
 
-/* Scrollbar personalizada */
-::-webkit-scrollbar { width: 6px; }
+/* MODIFICADO: Scrollbar personalizada con los colores sutiles */
+::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 10px; }
-::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #678CEC 0%, #BBCB50 100%); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #BBCB50 0%, #678CEC 100%); }
+::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #f9a8d4 0%, #c4b5fd 100%); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #f472b6 0%, #a78bfa 100%); }
+
+/* Tu nueva clase para los márgenes */
+.main-content {
+  max-width: 100%;
+  padding-left: 64px;
+  padding-right: 64px;
+  margin: 0 auto;
+}
+
