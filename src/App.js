@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+// --- LÍNEA MODIFICADA ---
+import { getAuth, onAuthStateChanged, signOut, initializeAuth, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where, writeBatch, Timestamp, arrayUnion, arrayRemove, orderBy, getDoc } from 'firebase/firestore';
 import { LayoutDashboard, Target, BrainCircuit, Home, FileText, Compass, Calendar, History, Moon, Sun, Plus, Zap, LogOut } from 'lucide-react';
 
@@ -55,7 +56,8 @@ const appId = "artflow-ai";
 
 // --- Firebase Initialization ---
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+// --- LÍNEA MODIFICADA ---
+const auth = initializeAuth(app, { persistence: browserLocalPersistence });
 const db = getFirestore(app);
 
 export const categories = [
@@ -526,6 +528,7 @@ export default function App() {
             </header>
 
             <main className="main-content py-8">
+                {activeView === 'dashboard' && showWelcomeBanner && <WelcomeBanner message={welcomeMessage} onDismiss={() => setShowWelcomeBanner(false)} />}
                 <div className="grid grid-cols-12 gap-8">
                     <div className="col-span-12 lg:col-span-5 xl:col-span-4">
                         <div className="sticky top-24 flex flex-col h-[calc(100vh-7rem-4rem)]">
