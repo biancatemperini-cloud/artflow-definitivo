@@ -8,10 +8,21 @@ const formatTime = (seconds) => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 };
 
-// --- Constantes de Duración ---
-const WORK_DURATION = 45 * 60; // Cambiado a 45 minutos
-const SHORT_BREAK_DURATION = 5 * 60;
-const LONG_BREAK_DURATION = 15 * 60;
+// Objeto para manejar las duraciones de ambos modos
+const pomoDurations = {
+    classic: {
+        work: 25 * 60,
+        shortBreak: 5 * 60,
+        longBreak: 15 * 60,
+        workMinutes: 25,
+    },
+    deep: {
+        work: 45 * 60,
+        shortBreak: 15 * 60,
+        longBreak: 30 * 60, // Asumimos un descanso largo proporcional
+        workMinutes: 45,
+    }
+};
 
 const motivationalMessages = [
     "Respira. Mira tu trabajo con ojos nuevos.",
@@ -20,7 +31,6 @@ const motivationalMessages = [
     "El arte necesita descanso para florecer. Pausa merecida."
 ];
 
-// --- Nuevo Componente para la pantalla de finalización ---
 const CompletionScreen = ({ message, onStartNext }) => (
     <div className="text-center flex flex-col items-center justify-center h-full p-4">
         <Wind size={40} className="text-violet-400 mb-4 animate-pulse" />
@@ -40,11 +50,11 @@ const CompletionScreen = ({ message, onStartNext }) => (
 
 
 const PomodoroTimer = ({ selectedTask, userId, darkMode, db, appId }) => {
-    const [timer, setTimer] = useState(WORK_DURATION);
+    const [pomoType, setPomoType] = useState('classic'); // 'classic' o 'deep'
+    const [timer, setTimer] = useState(pomoDurations[pomoType].work);
     const [isActive, setIsActive] = useState(false);
     const [mode, setMode] = useState('work');
     const [workIntervals, setWorkIntervals] = useState(0);
-    // --- Nuevo estado para la pantalla de finalización ---
     const [completionMessage, setCompletionMessage] = useState(null);
 
     const intervalRef = useRef(null);
@@ -62,13 +72,18 @@ const PomodoroTimer = ({ selectedTask, userId, darkMode, db, appId }) => {
             }
             stopTimer();
             if (mode === 'work') {
-                // Muestra la pantalla de finalización en lugar de cambiar de modo directamente
                 const randomMessage = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
                 setCompletionMessage(randomMessage);
                 
-                // Guarda la sesión de trabajo completada
                 if (selectedTask && userId) {
-                    const sessionData = { userId, taskId: selectedTask.id, taskName: selectedTask.name, projectId: selectedTask.projectId, completedAt: Timestamp.now(), duration: 45 };
+                    const sessionData = { 
+                        userId, 
+                        taskId: selectedTask.id, 
+                        taskName: selectedTask.name, 
+                        projectId: selectedTask.projectId, 
+                        completedAt: Timestamp.now(), 
+                        duration: pomoDurations[pomoType].workMinutes 
+                    };
                     const taskRef = doc(db, `/artifacts/${appId}/users/${userId}/tasks`, selectedTask.id);
                     const sessionRef = collection(db, `/artifacts/${appId}/users/${userId}/pomoSessions`);
                     const batch = writeBatch(db);
@@ -76,13 +91,13 @@ const PomodoroTimer = ({ selectedTask, userId, darkMode, db, appId }) => {
                     batch.set(doc(sessionRef), sessionData);
                     batch.commit();
                 }
-            } else { // Si un descanso termina, vuelve al trabajo
+            } else { 
                 setMode('work');
-                setTimer(WORK_DURATION);
+                setTimer(pomoDurations[pomoType].work);
             }
         }
         return () => clearInterval(intervalRef.current);
-    }, [isActive, timer, mode, selectedTask, userId, stopTimer, db, appId]);
+    }, [isActive, timer, mode, selectedTask, userId, stopTimer, db, appId, pomoType]);
 
     const startNextSession = () => {
         setCompletionMessage(null);
@@ -90,7 +105,7 @@ const PomodoroTimer = ({ selectedTask, userId, darkMode, db, appId }) => {
         setWorkIntervals(newWorkIntervals);
         const isLongBreak = newWorkIntervals % 4 === 0;
         setMode(isLongBreak ? 'longBreak' : 'shortBreak');
-        setTimer(isLongBreak ? LONG_BREAK_DURATION : SHORT_BREAK_DURATION);
+        setTimer(isLongBreak ? pomoDurations[pomoType].longBreak : pomoDurations[pomoType].shortBreak);
     };
 
     const toggleTimer = () => setIsActive(!isActive);
@@ -98,11 +113,17 @@ const PomodoroTimer = ({ selectedTask, userId, darkMode, db, appId }) => {
     const resetTimer = () => {
         stopTimer();
         setMode('work');
-        setTimer(WORK_DURATION);
+        setTimer(pomoDurations[pomoType].work);
         setWorkIntervals(0);
-        setCompletionMessage(null); // Asegúrate de limpiar el mensaje también
+        setCompletionMessage(null);
     };
     
+    const selectPomoType = (type) => {
+        if (isActive) return; // No cambiar de tipo si el temporizador está activo
+        setPomoType(type);
+        setTimer(pomoDurations[type].work);
+    };
+
     const getModeStyles = () => {
         if (mode === 'work') return 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300';
         if (mode === 'shortBreak') return 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300';
@@ -111,26 +132,43 @@ const PomodoroTimer = ({ selectedTask, userId, darkMode, db, appId }) => {
 
     const getModeText = () => {
         if (mode === 'work') return 'Enfoque';
-        if (mode === 'shortBreak') return 'Descanso Corto';
+        if (mode === 'shortBreak') return pomoType === 'classic' ? 'Descanso Corto' : 'Descanso';
         return 'Descanso Largo';
     };
 
     return (
-        <div className={`${darkMode ? 'glass-card-dark' : 'glass-card'} p-4 rounded-2xl shadow-2xl flex flex-col items-center hover-lift transition-all duration-300 min-h-[220px]`}>
+        <div className={`${darkMode ? 'glass-card-dark' : 'glass-card'} p-4 rounded-2xl shadow-2xl flex flex-col items-center hover-lift transition-all duration-300 min-h-[250px]`}>
             {completionMessage ? (
                 <CompletionScreen message={completionMessage} onStartNext={startNextSession} />
             ) : (
                 <>
-                    <div className={`px-2 py-1 rounded-full text-xs font-semibold mb-3 ${getModeStyles()} backdrop-blur border border-white/20`}>
+                    {!isActive && (
+                        <div className="flex space-x-2 mb-3 bg-gray-500/10 p-1 rounded-full">
+                            <button 
+                                onClick={() => selectPomoType('classic')} 
+                                className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${pomoType === 'classic' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}
+                            >
+                                Clásico (25/5)
+                            </button>
+                            <button 
+                                onClick={() => selectPomoType('deep')}
+                                className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${pomoType === 'deep' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}
+                            >
+                                Profundo (45/15)
+                            </button>
+                        </div>
+                    )}
+
+                    <div className={`px-2 py-1 rounded-full text-xs font-semibold mb-2 ${getModeStyles()} backdrop-blur border border-white/20`}>
                         {getModeText()}
                     </div>
                     <div
-                        className="text-6xl font-bold my-2 tabular-nums bg-gradient-to-r from-violet-400 to-rose-400 bg-clip-text text-transparent"
+                        className="text-6xl font-bold my-1 tabular-nums bg-gradient-to-r from-violet-400 to-rose-400 bg-clip-text text-transparent"
                         style={{ textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)' }}
                     >
                         {formatTime(timer)}
                     </div>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-4 h-4 text-center truncate w-full px-2">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-3 h-4 text-center truncate w-full px-2">
                         {isActive && selectedTask 
                             ? `En: ${selectedTask.name}` 
                             : (selectedTask ? 'Listo para enfocar' : 'Selecciona una tarea')
@@ -169,3 +207,4 @@ const PomodoroTimer = ({ selectedTask, userId, darkMode, db, appId }) => {
 };
 
 export default PomodoroTimer;
+

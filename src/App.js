@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
-// --- LÍNEA MODIFICADA ---
 import { getAuth, onAuthStateChanged, signOut, initializeAuth, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where, writeBatch, Timestamp, arrayUnion, arrayRemove, orderBy, getDoc } from 'firebase/firestore';
-import { LayoutDashboard, Target, BrainCircuit, Home, FileText, Compass, Calendar, History, Moon, Sun, Plus, Zap, LogOut } from 'lucide-react';
+import { LayoutDashboard, Target, BrainCircuit, Home, FileText, Compass, Calendar, History, Moon, Sun, Plus, Zap, LogOut, ClipboardList } from 'lucide-react';
 
 // Component Imports
 import AuthForm from './AuthForm';
@@ -24,6 +23,7 @@ import TaskForm from './components/forms/TaskForm';
 import HabitForm from './components/forms/HabitForm';
 import AnnualGoalForm from './components/forms/AnnualGoalForm';
 import WelcomeBanner from './components/WelcomeBanner';
+import PlannerView from './components/PlannerView';
 import { CatIcon } from './components/CatIcon';
 import { formatDate, getMonthId, getWeekId, timestampToDateString } from './utils/helpers';
 import Confetti from './components/Confetti';
@@ -37,7 +37,14 @@ const welcomeMessages = [
   "No esperes la inspiración. Ve a por ella con un plan.",
   "Un pequeño paso cada día construye una gran obra.",
   "Tu voz creativa es única. No dejes que nadie la silencie.",
-  "Permítete crear basura. Los diamantes se forman bajo presión."
+  "Permítete crear basura. Los diamantes se forman bajo presión.",
+  "El futuro pertenece a quienes creen en la belleza de sus sueños.",
+  "La diferencia entre lo posible y lo imposible está en la determinación de una persona.",
+  "No hay nada más verdaderamente artístico que amar a las personas.",
+  "Pinta tu propia visión del mundo, no la de otros.",
+  "Cada obra maestra fue una vez el trabajo de un amateur que no se rindió.",
+  "Eres coautora de cada obra en la que participas.",
+  "La belleza no está en la perfección, sino en la autenticidad"
 ];
 
 
@@ -56,7 +63,6 @@ const appId = "artflow-ai";
 
 // --- Firebase Initialization ---
 const app = initializeApp(firebaseConfig);
-// --- LÍNEA MODIFICADA ---
 const auth = initializeAuth(app, { persistence: browserLocalPersistence });
 const db = getFirestore(app);
 
@@ -111,6 +117,7 @@ export default function App() {
     const [editingGoal, setEditingGoal] = useState(null);
     const [welcomeMessage, setWelcomeMessage] = useState('');
     const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+    const [dailyTasks, setDailyTasks] = useState([]);
 
 
     const todaysHabits = useMemo(() => {
@@ -197,6 +204,11 @@ export default function App() {
             setAnnualGoals(goalsData);
         });
 
+        const dailyTasksRef = collection(db, `/artifacts/${appId}/users/${userId}/dailyTasks`);
+        const unsubscribeDailyTasks = onSnapshot(query(dailyTasksRef, orderBy("createdAt")), (snapshot) => {
+            setDailyTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
 
         return () => {
             unsubscribeProjects();
@@ -206,6 +218,7 @@ export default function App() {
             unsubscribeHabits();
             unsubscribeTemplates();
             unsubscribeGoals();
+            unsubscribeDailyTasks();
         };
     }, [isAuthReady, userId, activeProjectId, migrateData]);
 
@@ -224,6 +237,35 @@ export default function App() {
             setTasks([]);
         }
     }, [activeProjectId, allTasks]);
+    
+    const handleAddDailyTask = async (taskData) => {
+        if (!userId) return;
+        await addDoc(collection(db, `/artifacts/${appId}/users/${userId}/dailyTasks`), {
+            ...taskData,
+            createdAt: Timestamp.now()
+        });
+    };
+    
+    const handleToggleDailyTask = async (taskId, completed) => {
+        if (!userId) return;
+        await updateDoc(doc(db, `/artifacts/${appId}/users/${userId}/dailyTasks`, taskId), { completed });
+    };
+
+    const handleDeleteDailyTask = async (taskId) => {
+        if (!userId) return;
+        await deleteDoc(doc(db, `/artifacts/${appId}/users/${userId}/dailyTasks`, taskId));
+    };
+    
+    const handleTaskDragStart = (e, task) => {
+        e.dataTransfer.setData("task", JSON.stringify(task));
+    };
+
+    const handleDropTaskOnPlanner = async (taskData, column) => {
+        if (!userId) return;
+        const exists = dailyTasks.some(t => t.originalTaskId === taskData.id && t.column === column);
+        if (exists) return;
+        await handleAddDailyTask({ text: taskData.name, completed: false, column, originalTaskId: taskData.id });
+    };
 
     const handleAddOrUpdateHabit = async (habitData) => {
         if (!userId) return;
@@ -478,7 +520,7 @@ export default function App() {
     }
 
     const navButtons = [
-        { view: 'dashboard', icon: LayoutDashboard, label: 'Mi Día' }, { view: 'timer', icon: Target, label: 'Tareas' }, { view: 'brain', icon: BrainCircuit, label: 'Cerebro' }, { view: 'home', icon: Home, label: 'Hogar' }, { view: 'payments', icon: FileText, label: 'Pagos' }, { view: 'advisor', icon: Compass, label: 'Mentor' }, { view: 'calendar', icon: Calendar, label: 'Calendario' }, { view: 'history', icon: History, label: 'Historial' },
+        { view: 'dashboard', icon: LayoutDashboard, label: 'Mi Día' }, { view: 'planner', icon: ClipboardList, label: 'Planificador' }, { view: 'timer', icon: Target, label: 'Tareas' }, { view: 'brain', icon: BrainCircuit, label: 'Cerebro' }, { view: 'home', icon: Home, label: 'Hogar' }, { view: 'payments', icon: FileText, label: 'Pagos' }, { view: 'advisor', icon: Compass, label: 'Mentor' }, { view: 'calendar', icon: Calendar, label: 'Calendario' }, { view: 'history', icon: History, label: 'Historial' },
     ];
 
     const activeProjectName = projects.find(p => p.id === activeProjectId)?.name;
@@ -487,7 +529,8 @@ export default function App() {
     const renderContent = () => {
         switch (activeView) {
             case 'dashboard': return <DashboardView tasks={tasks} activeProjectName={activeProjectName} habits={todaysHabits} onToggleHabit={handleToggleHabit} onManageHabits={() => handleOpenHabitModal()} onEditHabit={handleOpenHabitModal} annualGoals={annualGoals} onToggleGoal={handleToggleGoal} onManageGoals={handleOpenGoalModal} showWelcomeBanner={showWelcomeBanner} welcomeMessage={welcomeMessage} onDismissWelcome={() => setShowWelcomeBanner(false)} />;
-            case 'timer': return activeProjectId ? ( <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-6 rounded-2xl shadow-lg"> <div className="flex justify-between items-center mb-4"> <h2 className="text-xl font-bold">Tareas</h2> <Tooltip text="Nueva Tarea"> <button onClick={() => { setEditingTask(null); setTaskPrefill(null); setIsTaskModalOpen(true); }} className="p-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 transform hover:scale-110"> <Plus size={20} /> </button> </Tooltip> </div> <ul className="space-y-2">{tasks.length > 0 ? tasks.map(t => <TaskItem key={t.id} task={t} onToggle={handleToggleTask} onDelete={handleDeleteTask} onSelect={setSelectedTask} isSelected={selectedTask?.id === t.id} onEdit={handleEditTask} onAddSubtask={handleAddSubtask} onToggleSubtask={handleToggleSubtask} onDeleteSubtask={handleDeleteSubtask} onDragStart={() => setDraggingTaskId(t.id)} onDrop={() => handleTaskDrop(t)} isDragging={draggingTaskId === t.id} />) : <div className="text-center py-8 px-4 border-2 border-dashed rounded-lg"><Target size={32} className="mx-auto text-gray-400" /><p className="mt-2 text-gray-600 dark:text-gray-400">Añade tareas a tu proyecto.</p></div>}</ul> </div> ) : ( <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-6 rounded-2xl shadow-lg text-center h-full flex flex-col justify-center items-center"> <Zap size={40} className="mx-auto text-gray-400 mb-4" /> <h3 className="text-lg font-semibold">Selecciona un proyecto</h3> <p className="mt-1 text-gray-600 dark:text-gray-400">Usa los filtros de categoría o crea un nuevo proyecto.</p> </div> );
+            case 'planner': return <PlannerView projects={projects} allTasks={allTasks} dailyTasks={dailyTasks} onDropTask={handleDropTaskOnPlanner} onAddDailyTask={handleAddDailyTask} onToggleDailyTask={handleToggleDailyTask} onDeleteDailyTask={handleDeleteDailyTask} onTaskDragStart={handleTaskDragStart} />;
+            case 'timer': return activeProjectId ? ( <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-6 rounded-2xl shadow-lg"> <div className="flex justify-between items-center mb-4"> <h2 className="text-xl font-bold">Tareas</h2> <Tooltip text="Nueva Tarea"> <button onClick={() => { setEditingTask(null); setTaskPrefill(null); setIsTaskModalOpen(true); }} className="p-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 transform hover:scale-110"> <Plus size={20} /> </button> </Tooltip> </div> <ul className="space-y-2">{tasks.length > 0 ? tasks.map(t => <TaskItem key={t.id} task={t} onToggle={handleToggleTask} onDelete={handleDeleteTask} onSelect={setSelectedTask} isSelected={selectedTask?.id === t.id} onEdit={handleEditTask} onAddSubtask={handleAddSubtask} onToggleSubtask={handleToggleSubtask} onDeleteSubtask={handleDeleteSubtask} onDragStart={(e) => handleTaskDragStart(e, t)} onDrop={() => handleTaskDrop(t)} isDragging={draggingTaskId === t.id} />) : <div className="text-center py-8 px-4 border-2 border-dashed rounded-lg"><Target size={32} className="mx-auto text-gray-400" /><p className="mt-2 text-gray-600 dark:text-gray-400">Añade tareas a tu proyecto.</p></div>}</ul> </div> ) : ( <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-6 rounded-2xl shadow-lg text-center h-full flex flex-col justify-center items-center"> <Zap size={40} className="mx-auto text-gray-400 mb-4" /> <h3 className="text-lg font-semibold">Selecciona un proyecto</h3> <p className="mt-1 text-gray-600 dark:text-gray-400">Usa los filtros de categoría o crea un nuevo proyecto.</p> </div> );
             case 'brain': return <BrainDumpView items={brainDumpItems} onAddItem={handleAddBrainDumpItem} onDeleteItem={handleDeleteBrainDumpItem} onConvertToTask={handleOpenConvertToTask} onConvertToProject={handleOpenConvertToProject} />;
             case 'home': return <HomeMissionsContainer userId={userId} db={db} appId={appId} getWeekId={getWeekId} />;
             case 'payments': return <PaymentsCenter userId={userId} payments={payments} db={db} appId={appId} getMonthId={getMonthId} />;
@@ -528,7 +571,7 @@ export default function App() {
             </header>
 
             <main className="main-content py-8">
-                {activeView === 'dashboard' && showWelcomeBanner && <WelcomeBanner message={welcomeMessage} onDismiss={() => setShowWelcomeBanner(false)} />}
+                {/* El banner se renderiza ahora en DashboardView */}
                 <div className="grid grid-cols-12 gap-8">
                     <div className="col-span-12 lg:col-span-5 xl:col-span-4">
                         <div className="sticky top-24 flex flex-col h-[calc(100vh-7rem-4rem)]">
@@ -564,7 +607,7 @@ export default function App() {
                             </div>
                         </div>
                     </div>
-                    <div className="col-span-12 lg:col-span-7 xl:col-span-8 space-y-8">
+                    <div className="col-span-12 lg:col-span-7 xl:col-span-8 flex flex-col gap-8">
                         <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-2 rounded-full shadow-lg flex justify-center items-center flex-wrap gap-2 sticky top-24 z-30">
                             {navButtons.map(btn => (
                                 <button key={btn.view} onClick={() => setActiveView(btn.view)} className={`flex items-center space-x-2 px-3 py-2 rounded-full transition-colors text-sm font-medium ${activeView === btn.view ? 'bg-indigo-600 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
@@ -572,7 +615,9 @@ export default function App() {
                                 </button>
                             ))}
                         </div>
-                        {renderContent()}
+                        <div className="flex-grow min-h-0">
+                            {renderContent()}
+                        </div>
                     </div>
                 </div>
             </main>
