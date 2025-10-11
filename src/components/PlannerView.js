@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { Plus, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import DailyTaskItem from './DailyTaskItem';
 
-// Nuevo componente interno para un proyecto plegable
 const CollapsibleProject = ({ project, tasks, onTaskDragStart }) => {
-    const [isOpen, setIsOpen] = useState(true); // Por defecto, los proyectos están abiertos
+    const [isOpen, setIsOpen] = useState(true);
 
     return (
         <div className="mb-4 bg-white/50 dark:bg-gray-700/30 rounded-lg p-2">
@@ -17,7 +16,7 @@ const CollapsibleProject = ({ project, tasks, onTaskDragStart }) => {
             </button>
             {isOpen && (
                 <ul className="space-y-2 mt-2">
-                    {tasks.map(task => (
+                    {(tasks || []).map(task => (
                         <li 
                             key={task.id} 
                             draggable="true" 
@@ -28,7 +27,7 @@ const CollapsibleProject = ({ project, tasks, onTaskDragStart }) => {
                             <span className="text-sm">{task.name}</span>
                         </li>
                     ))}
-                    {tasks.length === 0 && <p className="px-2 py-1 text-xs text-gray-500">No hay tareas pendientes en este proyecto.</p>}
+                    {(tasks || []).length === 0 && <p className="px-2 py-1 text-xs text-gray-500">No hay tareas pendientes.</p>}
                 </ul>
             )}
         </div>
@@ -37,8 +36,8 @@ const CollapsibleProject = ({ project, tasks, onTaskDragStart }) => {
 
 const PlannerView = ({ 
     projects, 
-    allTasks, 
-    dailyTasks,
+    allTasks = [], 
+    dailyTasks = [], // 👈 **AQUÍ ESTÁ LA CORRECCIÓN**
     onDropTask, 
     onAddDailyTask, 
     onToggleDailyTask, 
@@ -49,7 +48,7 @@ const PlannerView = ({
     const [newTaskTomorrow, setNewTaskTomorrow] = useState('');
 
     const handleAddTask = (text, column) => {
-        if (!text.trim()) return;
+        if (!text.trim() || !onAddDailyTask) return;
         onAddDailyTask({ text, completed: false, column });
         if (column === 'today') setNewTaskToday('');
         if (column === 'tomorrow') setNewTaskTomorrow('');
@@ -57,6 +56,7 @@ const PlannerView = ({
 
     const handleDrop = (e, column) => {
         e.preventDefault();
+        if (!onDropTask) return;
         const taskData = JSON.parse(e.dataTransfer.getData("task"));
         onDropTask(taskData, column);
     };
@@ -66,11 +66,10 @@ const PlannerView = ({
 
     return (
         <div className="grid grid-cols-12 gap-6 h-full">
-            {/* Panel de Proyectos */}
             <div className="col-span-12 lg:col-span-4 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-4 rounded-2xl shadow-lg flex flex-col h-full">
                 <h3 className="text-lg font-bold mb-4 px-2 flex-shrink-0">Arrastra desde tus Proyectos</h3>
                 <div className="flex-grow overflow-y-auto pr-2 min-h-0">
-                    {projects.map(project => (
+                    {(projects || []).map(project => (
                         <CollapsibleProject
                             key={project.id}
                             project={project}
@@ -80,10 +79,7 @@ const PlannerView = ({
                     ))}
                 </div>
             </div>
-
-            {/* Columnas del Planificador */}
             <div className="col-span-12 lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-                {/* Columna de Hoy */}
                 <div 
                     className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-4 rounded-2xl shadow-lg flex flex-col h-full"
                     onDragOver={(e) => e.preventDefault()}
@@ -98,8 +94,6 @@ const PlannerView = ({
                         <button type="submit" className="p-2 bg-violet-500 text-white rounded-full hover:bg-violet-600"><Plus size={18} /></button>
                     </form>
                 </div>
-
-                {/* Columna de Mañana */}
                 <div 
                     className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-4 rounded-2xl shadow-lg flex flex-col h-full"
                     onDragOver={(e) => e.preventDefault()}
@@ -120,4 +114,3 @@ const PlannerView = ({
 };
 
 export default PlannerView;
-

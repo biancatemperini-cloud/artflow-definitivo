@@ -20,7 +20,7 @@ const ProjectCard = ({ project, onSelect, onDelete, onEdit, onSaveAsTemplate, ac
             <div className="flex justify-between items-center gap-4">
                 <div className="flex items-center flex-1 min-w-0" >
                    <span className="cursor-grab text-gray-400 mr-2" onMouseDown={(e) => e.stopPropagation()}><GripVertical size={20}/></span>
-                   <h3 className="font-bold text-lg cursor-pointer card-text-wrap" onClick={() => onSelect(project.id)}>{project.name}</h3>
+                   <h3 className="font-bold text-lg cursor-pointer card-text-wrap" onClick={() => onSelect(project)}>{project.name}</h3>
                 </div>
                 <div className="flex items-center space-x-2 flex-shrink-0">
                     {/* --- NUEVO BOTÓN --- */}

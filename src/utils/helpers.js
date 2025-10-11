@@ -37,3 +37,8 @@ export const getDaysRemaining = (dueDate) => {
     if (diffDays === 1) return { text: 'Vence mañana', color: 'text-blue-500 font-semibold' };
     return { text: `Vence en ${diffDays} días`, color: 'text-pink-500' };
 };
+// 👇 Agrega esta nueva función al final del archivo
+export const getYearId = (date) => {
+  if (!date) return null;
+  return date.getFullYear().toString();
+};

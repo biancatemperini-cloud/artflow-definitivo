@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { BrainCircuit, Trash2, CheckCircle2, FolderPlus } from 'lucide-react';
 import Tooltip from './Tooltip';
 
-const BrainDumpView = ({ items, onAddItem, onDeleteItem, onConvertToTask, onConvertToProject }) => {
+const BrainDumpView = ({ items = [], onAddItem, onDeleteItem, onConvertToTask, onConvertToProject }) => {
     const [newItemText, setNewItemText] = useState('');
     
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (newItemText.trim()) {
+        if (newItemText.trim() && onAddItem) {
             onAddItem(newItemText);
             setNewItemText('');
         }
@@ -52,17 +52,17 @@ const BrainDumpView = ({ items, onAddItem, onDeleteItem, onConvertToTask, onConv
                                     <p className="flex-grow text-lg break-words min-h-[80px]">{item.text}</p>
                                     <div className="flex justify-end gap-2 mt-auto">
                                         <Tooltip text="Eliminar">
-                                            <button onClick={() => onDeleteItem(item.id)} className="p-1.5 text-red-500 hover:text-red-700">
+                                            <button onClick={() => onDeleteItem && onDeleteItem(item.id)} className="p-1.5 text-red-500 hover:text-red-700">
                                                 <Trash2 size={18} />
                                             </button>
                                         </Tooltip>
                                         <Tooltip text="Convertir a Proyecto">
-                                            <button onClick={() => onConvertToProject(item)} className="p-1.5 text-purple-600 hover:text-purple-800">
+                                            <button onClick={() => onConvertToProject && onConvertToProject(item)} className="p-1.5 text-purple-600 hover:text-purple-800">
                                                 <FolderPlus size={18} />
                                             </button>
                                         </Tooltip>
                                         <Tooltip text="Convertir a Tarea">
-                                            <button onClick={() => onConvertToTask(item)} className="p-1.5 text-green-600 hover:text-green-800">
+                                            <button onClick={() => onConvertToTask && onConvertToTask(item)} className="p-1.5 text-green-600 hover:text-green-800">
                                                 <CheckCircle2 size={18} />
                                             </button>
                                         </Tooltip>
@@ -83,3 +83,4 @@ const BrainDumpView = ({ items, onAddItem, onDeleteItem, onConvertToTask, onConv
 };
 
 export default BrainDumpView;
+
