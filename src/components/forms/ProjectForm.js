@@ -1,35 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Trash2 } from 'lucide-react';
+import useGemini from '../../hooks/useGemini'; // Importamos el hook que centraliza la lógica
 
 const ProjectForm = ({ onSubmit, project, prefill, categories, templates }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [category, setCategory] = useState(categories[0]?.name || ''); 
+    const [category, setCategory] = useState((categories && categories.length > 0) ? categories[0].name : ''); 
     const [generatedTasks, setGeneratedTasks] = useState([]); 
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [error, setError] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState('');
     
+    // Usamos nuestro hook para manejar la llamada a la API
+    const { generateContent, isLoading: isGenerating, error: generationError } = useGemini();
+    const [formError, setFormError] = useState('');
+
+    // Sincronizamos los errores del hook con los del formulario
+    useEffect(() => {
+        setFormError(generationError);
+    }, [generationError]);
+    
+    // Efecto para inicializar o resetear el formulario
     useEffect(() => { 
         if (project) { 
             setName(project.name); 
             setDescription(project.description || ''); 
-            setCategory(project.category || categories[0]?.name);
+            setCategory(project.category || ((categories && categories.length > 0) ? categories[0].name : ''));
             setSelectedTemplate('');
         } else if (prefill) {
             setName(prefill.name);
             setDescription('');
-            setCategory(categories[0]?.name);
-        }
-        else { 
+            setCategory((categories && categories.length > 0) ? categories[0].name : '');
+        } else { 
             setName(''); 
             setDescription(''); 
-            setCategory(categories[0]?.name);
+            setCategory((categories && categories.length > 0) ? categories[0].name : '');
             setSelectedTemplate('');
         } 
-        setGeneratedTasks([]); 
+        setGeneratedTasks([]);
+        setFormError(''); 
     }, [project, prefill, categories]);
 
+    // Efecto para actualizar la categoría si se selecciona una plantilla
     useEffect(() => {
         if (selectedTemplate) {
             const template = templates.find(t => t.id === selectedTemplate);
@@ -41,46 +51,28 @@ const ProjectForm = ({ onSubmit, project, prefill, categories, templates }) => {
     
     const handleGenerateTasks = async () => {
         if (!name.trim()) { 
-            setError("Por favor, introduce un nombre para el proyecto."); 
+            setFormError("Por favor, introduce un nombre para el proyecto."); 
             return; 
         }
-        setError(''); 
-        setIsGenerating(true); 
+        setFormError(''); 
         setGeneratedTasks([]);
         const prompt = `Eres un asistente experto en gestión de proyectos para artistas. Un usuario está creando un proyecto. Basado en el título y la descripción, desglósalo en una lista de 5 a 10 tareas procesables para un flujo de trabajo creativo. Devuelve un array JSON de strings. Título: "${name}", Descripción: "${description}". Responde únicamente con el array JSON.`;
         
-        try {
-            let text;
-            if (process.env.NODE_ENV === 'development') {
-                const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-                if (!apiKey) throw new Error("La clave de API de Gemini no se encontró.");
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                if (!response.ok) throw new Error(`Error de la API: ${response.statusText}`);
-                const result = await response.json();
-                text = result.candidates[0].content.parts[0].text;
-            } else {
-                const apiUrl = '/api/gemini-proxy';
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt }) });
-                if (!response.ok) throw new Error(`Error del proxy: ${response.statusText}`);
-                const result = await response.json();
-                text = result.candidates[0].content.parts[0].text;
-            }
-            
-            const jsonString = text.replace(/```json|```/g, '').trim();
-            const tasksArray = JSON.parse(jsonString);
-            
-            setGeneratedTasks(tasksArray.map((taskText, index) => ({
-                id: index,
-                text: taskText,
-                isSelected: true
-            })));
+        const text = await generateContent(prompt);
 
-        } catch (e) { 
-            console.error("Error detallado al generar tareas:", e.message); 
-            setError("No se pudieron generar las tareas. Inténtalo de nuevo."); 
-        } finally { 
-            setIsGenerating(false); 
+        if (text) {
+            try {
+                const jsonString = text.replace(/```json|```/g, '').trim();
+                const tasksArray = JSON.parse(jsonString);
+                setGeneratedTasks(tasksArray.map((taskText, index) => ({
+                    id: `gen-${index}-${Date.now()}`,
+                    text: taskText,
+                    isSelected: true
+                })));
+            } catch (e) {
+                console.error("Error al parsear la respuesta de la IA:", e);
+                setFormError("La respuesta de la IA no tuvo el formato esperado. Inténtalo de nuevo.");
+            }
         }
     };
     
@@ -109,11 +101,6 @@ const ProjectForm = ({ onSubmit, project, prefill, categories, templates }) => {
             .map(task => task.text);
 
         onSubmit({ name, description, category }, project ? [] : finalTasks, selectedTemplate); 
-        setName(''); 
-        setDescription(''); 
-        setGeneratedTasks([]); 
-        setCategory(categories[0]?.name || '');
-        setSelectedTemplate('');
     };
 
     const isAiDisabled = isGenerating || !name || !!selectedTemplate;
@@ -140,7 +127,7 @@ const ProjectForm = ({ onSubmit, project, prefill, categories, templates }) => {
             <div>
                 <label className="block text-sm font-medium">Categoría</label>
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500" disabled={!!selectedTemplate}>
-                    {categories.map(cat => (
+                    {categories && categories.map(cat => (
                         <option key={cat.name} value={cat.name}>{cat.name}</option>
                     ))}
                 </select>
@@ -159,7 +146,7 @@ const ProjectForm = ({ onSubmit, project, prefill, categories, templates }) => {
                         </button>
                         {!!selectedTemplate && <div className="absolute inset-0 flex items-center justify-center text-xs text-center text-white bg-gray-600/50 rounded-md">Desactivado al usar plantilla</div>}
                     </div>
-                    {error && <p className="text-sm text-red-500">{error}</p>}
+                    {formError && <p className="text-sm text-red-500">{formError}</p>}
                     
                     {generatedTasks.length > 0 && (
                         <div className="space-y-2">
@@ -198,4 +185,3 @@ const ProjectForm = ({ onSubmit, project, prefill, categories, templates }) => {
 };
 
 export default ProjectForm;
-

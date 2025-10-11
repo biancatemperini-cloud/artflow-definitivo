@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import DailyTaskItem from './DailyTaskItem';
+import { dateToYMD } from '../utils/helpers';
 
 const CollapsibleProject = ({ project, tasks, onTaskDragStart }) => {
     const [isOpen, setIsOpen] = useState(true);
@@ -37,32 +38,52 @@ const CollapsibleProject = ({ project, tasks, onTaskDragStart }) => {
 const PlannerView = ({ 
     projects, 
     allTasks = [], 
-    dailyTasks = [], // 👈 **AQUÍ ESTÁ LA CORRECCIÓN**
+    dailyTasks = [],
     onDropTask, 
     onAddDailyTask, 
     onToggleDailyTask, 
     onDeleteDailyTask,
-    onTaskDragStart
+    onTaskDragStart,
+    onMoveDailyTask
 }) => {
     const [newTaskToday, setNewTaskToday] = useState('');
     const [newTaskTomorrow, setNewTaskTomorrow] = useState('');
 
-    const handleAddTask = (text, column) => {
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+
+    const todayStr = dateToYMD(today);
+    const tomorrowStr = dateToYMD(tomorrow);
+
+    const handleAddTask = (text, date) => {
         if (!text.trim() || !onAddDailyTask) return;
-        onAddDailyTask({ text, completed: false, column });
-        if (column === 'today') setNewTaskToday('');
-        if (column === 'tomorrow') setNewTaskTomorrow('');
+        onAddDailyTask({ text, completed: false, planDate: dateToYMD(date) });
+        if (dateToYMD(date) === todayStr) setNewTaskToday('');
+        if (dateToYMD(date) === tomorrowStr) setNewTaskTomorrow('');
     };
 
-    const handleDrop = (e, column) => {
+    const handleDrop = (e, date) => {
         e.preventDefault();
-        if (!onDropTask) return;
-        const taskData = JSON.parse(e.dataTransfer.getData("task"));
-        onDropTask(taskData, column);
+        const droppedTask = e.dataTransfer.getData("task");
+        const movedDailyTask = e.dataTransfer.getData("dailyTaskMove");
+
+        if (movedDailyTask) {
+            // Moviendo una tarea diaria existente
+            if (!onMoveDailyTask) return;
+            const task = JSON.parse(movedDailyTask);
+            onMoveDailyTask(task.id, date);
+        } else if (droppedTask) {
+            // Añadiendo una nueva tarea desde proyectos
+            if (!onDropTask) return;
+            const taskData = JSON.parse(droppedTask);
+            onDropTask(taskData, date);
+        }
     };
 
-    const todayTasks = dailyTasks.filter(t => t.column === 'today');
-    const tomorrowTasks = dailyTasks.filter(t => t.column === 'tomorrow');
+    const todayAndOverdueTasks = dailyTasks.filter(t => t.planDate <= todayStr && !t.completed);
+    const completedTodayTasks = dailyTasks.filter(t => t.planDate <= todayStr && t.completed);
+    const tomorrowTasksFiltered = dailyTasks.filter(t => t.planDate === tomorrowStr);
 
     return (
         <div className="grid grid-cols-12 gap-6 h-full">
@@ -83,13 +104,15 @@ const PlannerView = ({
                 <div 
                     className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-4 rounded-2xl shadow-lg flex flex-col h-full"
                     onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleDrop(e, 'today')}
+                    onDrop={(e) => handleDrop(e, today)}
                 >
-                    <h3 className="text-lg font-bold mb-4 flex-shrink-0">Hoy</h3>
+                    <h3 className="text-lg font-bold mb-4 flex-shrink-0">Hoy ({today.toLocaleDateString('es-ES', {day: '2-digit', month:'2-digit'})})</h3>
                     <div className="flex-grow overflow-y-auto pr-2 space-y-2 min-h-0">
-                        {todayTasks.map(task => <DailyTaskItem key={task.id} task={task} onToggle={onToggleDailyTask} onDelete={onDeleteDailyTask} />)}
+                        {todayAndOverdueTasks.map(task => <DailyTaskItem key={task.id} task={task} onToggle={onToggleDailyTask} onDelete={onDeleteDailyTask} />)}
+                        {completedTodayTasks.length > 0 && todayAndOverdueTasks.length > 0 && <hr className="my-4 border-gray-300 dark:border-gray-600"/>}
+                        {completedTodayTasks.map(task => <DailyTaskItem key={task.id} task={task} onToggle={onToggleDailyTask} onDelete={onDeleteDailyTask} />)}
                     </div>
-                    <form onSubmit={(e) => { e.preventDefault(); handleAddTask(newTaskToday, 'today'); }} className="flex items-center gap-2 mt-4 flex-shrink-0">
+                    <form onSubmit={(e) => { e.preventDefault(); handleAddTask(newTaskToday, today); }} className="flex items-center gap-2 mt-4 flex-shrink-0">
                         <input value={newTaskToday} onChange={(e) => setNewTaskToday(e.target.value)} type="text" placeholder="Nueva tarea para hoy..." className="w-full text-sm px-3 py-2 bg-white dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500" />
                         <button type="submit" className="p-2 bg-violet-500 text-white rounded-full hover:bg-violet-600"><Plus size={18} /></button>
                     </form>
@@ -97,13 +120,13 @@ const PlannerView = ({
                 <div 
                     className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-4 rounded-2xl shadow-lg flex flex-col h-full"
                     onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleDrop(e, 'tomorrow')}
+                    onDrop={(e) => handleDrop(e, tomorrow)}
                 >
-                    <h3 className="text-lg font-bold mb-4 flex-shrink-0">Mañana</h3>
+                    <h3 className="text-lg font-bold mb-4 flex-shrink-0">Mañana ({tomorrow.toLocaleDateString('es-ES', {day: '2-digit', month:'2-digit'})})</h3>
                      <div className="flex-grow overflow-y-auto pr-2 space-y-2 min-h-0">
-                        {tomorrowTasks.map(task => <DailyTaskItem key={task.id} task={task} onToggle={onToggleDailyTask} onDelete={onDeleteDailyTask} />)}
+                        {tomorrowTasksFiltered.map(task => <DailyTaskItem key={task.id} task={task} onToggle={onToggleDailyTask} onDelete={onDeleteDailyTask} />)}
                     </div>
-                    <form onSubmit={(e) => { e.preventDefault(); handleAddTask(newTaskTomorrow, 'tomorrow'); }} className="flex items-center gap-2 mt-4 flex-shrink-0">
+                    <form onSubmit={(e) => { e.preventDefault(); handleAddTask(newTaskTomorrow, tomorrow); }} className="flex items-center gap-2 mt-4 flex-shrink-0">
                         <input value={newTaskTomorrow} onChange={(e) => setNewTaskTomorrow(e.target.value)} type="text" placeholder="Nueva tarea para mañana..." className="w-full text-sm px-3 py-2 bg-white dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500" />
                         <button type="submit" className="p-2 bg-violet-500 text-white rounded-full hover:bg-violet-600"><Plus size={18} /></button>
                     </form>

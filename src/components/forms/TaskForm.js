@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Timestamp } from 'firebase/firestore';
 
-const TaskForm = ({ onSubmit, task, projects, isNewTask, activeProjectId }) => {
+const TaskForm = ({ onSubmit, task, projects, isNewTask, activeProjectId, prefill }) => {
     const [name, setName] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Media');
@@ -9,21 +9,27 @@ const TaskForm = ({ onSubmit, task, projects, isNewTask, activeProjectId }) => {
     const [selectedProjectId, setSelectedProjectId] = useState('');
 
     useEffect(() => {
-        // Set initial values for text fields, notes, etc. based on task prop
-        setName(task?.name || '');
-        setNotes(task?.notes || '');
-        setPriority(task?.priority || 'Media');
-        setDueDate(task?.dueDate ? new Date(task.dueDate.seconds * 1000).toISOString().split('T')[0] : '');
-
-        // Logic to determine the default selected project
-        if (isNewTask) {
-            // For any new task (from project view or BrainDump), default to the currently active project
+        if (task) {
+            setName(task.name || '');
+            setNotes(task.notes || '');
+            setPriority(task.priority || 'Media');
+            setDueDate(task.dueDate ? new Date(task.dueDate.seconds * 1000).toISOString().split('T')[0] : '');
+            setSelectedProjectId(task.projectId || '');
+        } else if (prefill) {
+            setName(prefill.name || '');
+            setNotes('');
+            setPriority('Media');
+            setDueDate('');
             setSelectedProjectId(activeProjectId || (projects && projects.length > 0 ? projects[0].id : ''));
         } else {
-            // When editing an existing task, always use its own project ID
-            setSelectedProjectId(task?.projectId || '');
+            setName('');
+            setNotes('');
+            setPriority('Media');
+            setDueDate('');
+            setSelectedProjectId(activeProjectId || (projects && projects.length > 0 ? projects[0].id : ''));
         }
-    }, [task, projects, activeProjectId, isNewTask]);
+
+    }, [task, projects, activeProjectId, isNewTask, prefill]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -47,7 +53,7 @@ const TaskForm = ({ onSubmit, task, projects, isNewTask, activeProjectId }) => {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <div><label htmlFor="taskName" className="block text-sm font-medium">Nombre de la Tarea</label><input type="text" id="taskName" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500" placeholder="Ej: Bocetar ideas iniciales" required /></div>
+            <div><label htmlFor="taskName" className="block text-sm font-medium">Nombre de la Tarea</label><input type="text" id="taskName" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500" placeholder="Ej: Bocetar ideas iniciales" required autoFocus/></div>
             
             {isNewTask && projects && projects.length > 0 && (
                 <div>
@@ -71,10 +77,9 @@ const TaskForm = ({ onSubmit, task, projects, isNewTask, activeProjectId }) => {
                 <label htmlFor="notes" className="block text-sm font-medium">Notas (Opcional)</label>
                 <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500" placeholder="Añade detalles, ideas o enlaces..."></textarea>
             </div>
-            <div className="flex justify-end pt-2"><button type="submit" className="inline-flex justify-center py-2 px-4 border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-pink-600 hover:bg-pink-700">{!isNewTask ? 'Actualizar Tarea' : 'Añadir Tarea'}</button></div>
+            <div className="flex justify-end pt-2"><button type="submit" className="inline-flex justify-center py-2 px-4 border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-pink-600 hover:bg-pink-700">{task ? 'Actualizar Tarea' : 'Añadir Tarea'}</button></div>
         </form>
     );
 };
 
 export default TaskForm;
-

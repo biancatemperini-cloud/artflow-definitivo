@@ -2,7 +2,8 @@ import React from 'react';
 import { Target, Flame, PlusCircle, Star } from 'lucide-react';
 import HabitItem from './HabitItem';
 import GoalItem from './GoalItem';
-import WelcomeBanner from './WelcomeBanner'; // Importamos el banner
+import WelcomeBanner from './WelcomeBanner';
+import HomeMissionsWidget from './HomeMissionsWidget'; // Importamos el nuevo widget
 
 const getDaysRemaining = (dueDate) => {
     if (!dueDate) return { text: '', color: 'text-gray-400' };
@@ -28,10 +29,11 @@ const DashboardView = ({
     annualGoals,
     onToggleGoal,
     onManageGoals,
-    // --- Nuevos props para el banner ---
     showWelcomeBanner,
     welcomeMessage,
-    onDismissWelcome
+    onDismissWelcome,
+    homeMissions,
+    onCompleteHomeMission
 }) => {
     const focusTasks = tasks
         .filter(t => !t.completed)
@@ -46,9 +48,9 @@ const DashboardView = ({
         
     return (
         <div className="space-y-6">
-            {/* Fila superior con Foco y Hábitos */}
+            {showWelcomeBanner && <WelcomeBanner message={welcomeMessage} onDismiss={onDismissWelcome} />}
+            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Foco del Día */}
                 <div className="bg-gradient-to-br from-pink-100 to-violet-200 dark:from-pink-900/50 dark:to-violet-900/50 p-6 rounded-2xl shadow-2xl shadow-violet-400/80 dark:shadow-violet-800/40">
                     <h3 className="flex items-center text-xl font-bold mb-4 text-gray-800 dark:text-white"><Target className="mr-2" /> Foco del Día</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">Tus próximas tareas para: <span className="font-bold">{activeProjectName || "ningún proyecto"}</span></p>
@@ -64,7 +66,6 @@ const DashboardView = ({
                     ) : <p className="text-center py-4 text-gray-700 dark:text-gray-300">¡Todo listo por aquí!</p>}
                 </div>
 
-                {/* Hábitos de Hoy */}
                 <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-6 rounded-2xl shadow-lg flex flex-col">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="flex items-center text-xl font-bold"><Flame className="mr-2 text-orange-500" /> Hábitos de Hoy</h3>
@@ -89,7 +90,13 @@ const DashboardView = ({
                 </div>
             </div>
 
-            {/* Tarjeta de Metas Anuales */}
+            {homeMissions && homeMissions.length > 0 && (
+                 <HomeMissionsWidget 
+                    missions={homeMissions} 
+                    onCompleteMission={onCompleteHomeMission} 
+                 />
+            )}
+
             <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-6 rounded-2xl shadow-lg">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="flex items-center text-xl font-bold"><Star className="mr-2 text-yellow-400" /> Metas Anuales</h3>
@@ -116,12 +123,8 @@ const DashboardView = ({
                     )}
                 </div>
             </div>
-
-            {/* --- BANNER DE BIENVENIDA AÑADIDO AQUÍ --- */}
-            {showWelcomeBanner && <WelcomeBanner message={welcomeMessage} onDismiss={onDismissWelcome} />}
         </div>
     );
 };
 
 export default DashboardView;
-

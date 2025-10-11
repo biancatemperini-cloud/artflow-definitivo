@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Tooltip from './Tooltip';
-import { getDaysRemaining } from '../utils/helpers'; // Assuming you create a helpers file
+import { getDaysRemaining } from '../utils/helpers';
 import { MessageSquare, ArrowUp, ArrowDown, Minus, ListTree, Edit2, Trash2, GripVertical, CheckCircle, Circle, Plus } from 'lucide-react';
 
 const TaskItem = ({ task, onToggle, onDelete, onSelect, isSelected, onEdit, onAddSubtask, onToggleSubtask, onDeleteSubtask, onDragStart, onDrop, isDragging }) => {

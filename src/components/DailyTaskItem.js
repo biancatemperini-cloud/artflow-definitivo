@@ -1,9 +1,20 @@
 import React from 'react';
-import { CheckCircle, Circle, Trash2 } from 'lucide-react';
+import { CheckCircle, Circle, Trash2, GripVertical } from 'lucide-react';
 
 const DailyTaskItem = ({ task, onToggle, onDelete }) => {
+    
+    const handleDragStart = (e, task) => {
+        // Usamos un tipo diferente para distinguirlo de las tareas de proyecto
+        e.dataTransfer.setData("dailyTaskMove", JSON.stringify(task));
+    };
+
     return (
-        <div className="flex items-center p-3 rounded-lg bg-white dark:bg-gray-700 shadow-sm group">
+        <div 
+            draggable="true"
+            onDragStart={(e) => handleDragStart(e, task)}
+            className="flex items-center p-3 rounded-lg bg-white dark:bg-gray-700 shadow-sm group cursor-grab active:cursor-grabbing"
+        >
+            <GripVertical size={16} className="text-gray-400 mr-2 flex-shrink-0" />
             <button
                 onClick={() => onToggle(task.id, !task.completed)}
                 aria-label={`Marcar tarea ${task.text}`}
