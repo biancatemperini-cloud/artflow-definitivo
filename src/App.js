@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useAuth } from './context/AuthContext';
-import { db } from './firebase-config';
+// CORRECCIÓN 1: Se agregó 'auth' a esta línea de importación.
+import { db, auth } from './firebase-config'; 
 import { collection, onSnapshot, doc, query, orderBy, updateDoc, Timestamp, addDoc, deleteDoc, getDoc, setDoc, writeBatch, where, getDocs } from 'firebase/firestore';
 
 // Componentes
@@ -25,6 +26,8 @@ import Confetti from './components/Confetti';
 import Modal from './components/Modal';
 import WelcomeBanner from './components/WelcomeBanner';
 import HomeMissionsWidget from './components/HomeMissionsWidget';
+// CORRECCIÓN 2: Se agregó la importación del componente HomeMissionsContainer.
+import HomeMissionsContainer from './components/HomeMissionsContainer'; 
 import HistoryLog from './components/HistoryLog';
 
 // Iconos y helpers
